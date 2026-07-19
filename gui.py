@@ -27,6 +27,7 @@ from PySide6.QtGui import (
     QGuiApplication,
     QIcon,
     QPainter,
+    QPalette,
     QPixmap,
     QTextCursor,
 )
@@ -81,19 +82,51 @@ STATE = {  # 狀態 → (色, 文字)
     "error": ("#b02a2a", "錯誤"),
 }
 
+# 明確指定前景+背景色，強制淺色一致主題（不看 OS 深/淺主題臉色，避免白底白字）
 STYLE = """
-QWidget { font-family: "Segoe UI","Microsoft JhengHei UI",sans-serif; font-size: 10pt; }
-QTabWidget::pane { border: 1px solid #d0d4da; border-radius: 8px; top: -1px; }
-QTabBar::tab { padding: 8px 18px; margin-right: 2px;
-  border-top-left-radius: 8px; border-top-right-radius: 8px; color: #555; }
-QTabBar::tab:selected { background: #3bb273; color: white; }
-QPushButton { padding: 7px 14px; border-radius: 6px; border: 1px solid #c2c8d0; background: #f6f7f9; }
+QWidget { font-family: "Segoe UI","Microsoft JhengHei UI",sans-serif; font-size: 10pt;
+  color: #1c2430; }
+QMainWindow, QTabWidget, QTabWidget::pane > QWidget { background: #f4f5f7; }
+QTabWidget::pane { border: 1px solid #d0d4da; border-radius: 8px; top: -1px; background: #f4f5f7; }
+QTabBar::tab { padding: 8px 18px; margin-right: 2px; background: #e7eaee; color: #4a5060;
+  border-top-left-radius: 8px; border-top-right-radius: 8px; }
+QTabBar::tab:selected { background: #3bb273; color: #ffffff; }
+QLabel { color: #1c2430; background: transparent; }
+QPushButton { padding: 7px 14px; border-radius: 6px; border: 1px solid #c2c8d0;
+  background: #ffffff; color: #1c2430; }
 QPushButton:hover { border-color: #3bb273; }
-QPushButton:disabled { color: #aaa; }
+QPushButton:pressed { background: #eef0f3; }
+QPushButton:disabled { color: #a6abb4; background: #f0f1f3; }
 QLineEdit, QComboBox, QTextEdit, QListWidget {
-  border: 1px solid #c2c8d0; border-radius: 6px; padding: 5px; background: white; }
+  border: 1px solid #c2c8d0; border-radius: 6px; padding: 5px;
+  background: #ffffff; color: #1c2430; selection-background-color: #3bb273;
+  selection-color: #ffffff; }
+QComboBox QAbstractItemView { background: #ffffff; color: #1c2430;
+  selection-background-color: #3bb273; selection-color: #ffffff; }
 QListWidget::item { padding: 4px 2px; }
+QListWidget::item:selected { background: #3bb273; color: #ffffff; }
 """
+
+
+def _apply_light_theme(app: QApplication) -> None:
+    """Fusion + 明確淺色 palette，保證每個內建元件都是深字淺底、不受 OS 主題影響。"""
+    app.setStyle("Fusion")
+    pal = QPalette()
+    pal.setColor(QPalette.Window, QColor("#f4f5f7"))
+    pal.setColor(QPalette.WindowText, QColor("#1c2430"))
+    pal.setColor(QPalette.Base, QColor("#ffffff"))
+    pal.setColor(QPalette.AlternateBase, QColor("#eef0f3"))
+    pal.setColor(QPalette.Text, QColor("#1c2430"))
+    pal.setColor(QPalette.Button, QColor("#f0f2f5"))
+    pal.setColor(QPalette.ButtonText, QColor("#1c2430"))
+    pal.setColor(QPalette.ToolTipBase, QColor("#ffffff"))
+    pal.setColor(QPalette.ToolTipText, QColor("#1c2430"))
+    pal.setColor(QPalette.PlaceholderText, QColor("#8a8f98"))
+    pal.setColor(QPalette.Highlight, QColor("#3bb273"))
+    pal.setColor(QPalette.HighlightedText, QColor("#ffffff"))
+    pal.setColor(QPalette.Disabled, QPalette.Text, QColor("#a6abb4"))
+    pal.setColor(QPalette.Disabled, QPalette.ButtonText, QColor("#a6abb4"))
+    app.setPalette(pal)
 
 
 # ---------- 設定持久化 ----------
@@ -519,6 +552,7 @@ def main() -> int:
     try:
         app = QApplication(sys.argv)
         app.setQuitOnLastWindowClosed(False)  # 關視窗不等於離開
+        _apply_light_theme(app)
         app.setStyleSheet(STYLE)
         if not QSystemTrayIcon.isSystemTrayAvailable():
             QMessageBox.critical(None, "聽寫", "此系統沒有可用的系統匣，無法執行。")
