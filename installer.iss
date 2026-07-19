@@ -8,6 +8,8 @@
 [Setup]
 AppName={#AppName}
 AppVersion={#AppVersion}
+; per-user 安裝：免系統管理員、裝到使用者目錄，{userstartup} 開機項才會落在正確使用者
+PrivilegesRequired=lowest
 DefaultDirName={autopf}\WhisperDictateTW
 DefaultGroupName={#AppName}
 UninstallDisplayIcon={app}\{#AppExe}
