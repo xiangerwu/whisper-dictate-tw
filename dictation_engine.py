@@ -64,7 +64,8 @@ class DictationEngine:
         self._frames: list[np.ndarray] = []
         self._stream: Optional[sd.InputStream] = None
         self._state = "idle"
-        self._lock = threading.Lock()
+        self._lock = threading.Lock()  # 狀態機（toggle/錄音）
+        self._infer_lock = threading.Lock()  # 序列化模型推論：麥克風與音檔匯入不同時呼叫（CTranslate2 非執行緒安全）
 
     @property
     def state(self) -> str:
@@ -105,11 +106,12 @@ class DictationEngine:
         if not self.ready:
             raise RuntimeError("模型尚未載入")
         parts: list[str] = []
-        for segment in self._stt.transcribe_segments(str(path)):  # type: ignore[union-attr]
-            segment = self._to_traditional(segment)
-            parts.append(segment)
-            if on_segment is not None:
-                on_segment(segment)
+        with self._infer_lock:  # 不與麥克風轉錄同時用模型
+            for segment in self._stt.transcribe_segments(str(path)):  # type: ignore[union-attr]
+                segment = self._to_traditional(segment)
+                parts.append(segment)
+                if on_segment is not None:
+                    on_segment(segment)
         return "".join(parts).strip()
 
     def toggle(self) -> None:
@@ -150,7 +152,8 @@ class DictationEngine:
             text = ""
             if frames:
                 audio = np.concatenate(frames, axis=0).reshape(-1).astype(np.float32)
-                text = self._stt.transcribe(audio)  # type: ignore[union-attr]
+                with self._infer_lock:  # 不與音檔匯入同時用模型
+                    text = self._stt.transcribe(audio)  # type: ignore[union-attr]
             text = self._to_traditional(text)  # 決定性繁化（台灣用語）
             if text:
                 self._keyboard.type(text)  # 以 Unicode 直接打在游標位置
