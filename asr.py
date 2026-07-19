@@ -6,6 +6,7 @@ transcribe_segments() 逐段 yield，供音檔匯入做即時輸出。
 """
 from __future__ import annotations
 
+import logging
 from typing import Iterator
 
 import numpy as np
@@ -33,14 +34,20 @@ class SpeechToText:
         self.model = self._load()
 
     def _load(self) -> WhisperModel:
-        """載入模型；若指定 cuda 但失敗（無 GPU / 顯存不足），自動退回 CPU int8。"""
+        """載入模型；若指定 cuda 但失敗（無 GPU / 缺 CUDA DLL / 顯存不足），自動退回 CPU int8。
+
+        打包版預設 cpu、自帶可跑；cuda 需目標機器裝有 CUDA 執行庫，缺了就走這條退回，
+        原因會寫進 log（缺哪個 DLL 也看得到），不讓程式崩潰。
+        """
         try:
             return WhisperModel(
                 self.model_name, device=self.device, compute_type=self.compute_type
             )
         except Exception as exc:  # noqa: BLE001 - 退回策略需攔截所有載入錯誤
             if self.device != "cpu":
-                print(f"[ASR] {self.device} 載入失敗（{exc}），改用 CPU int8。")
+                logging.warning(
+                    "%s 載入失敗（%s），改用 CPU int8。", self.device, exc
+                )
                 self.device, self.compute_type = "cpu", "int8"
                 return WhisperModel(self.model_name, device="cpu", compute_type="int8")
             raise

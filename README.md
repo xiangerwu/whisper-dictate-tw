@@ -17,7 +17,16 @@
 - **系統匣常駐**：關閉視窗縮回托盤，背景待命；圖示顏色反映狀態。
 - **按鍵擷取設定熱鍵**：直接按下組合鍵設定，不用手打字串。
 
-預設模型 `large-v3-turbo`（多語、接近 large-v3 準度但快數倍）。
+預設模型 `large-v3-turbo`（多語、接近 large-v3 準度但快數倍），預設用 **CPU**（int8，任何機器都能跑）。
+
+## 下載
+
+到 **[Releases](https://github.com/xiangerwu/whisper-dictate-tw/releases)** 下載：
+
+- `whisper-dictate-tw-setup.exe` — 安裝檔（per-user，免系統管理員，可勾開機自動啟動）。
+- 或直接抓免安裝的 zip，解開雙擊 `whisper-dictate-tw.exe`。
+
+首次執行會下載模型（約 1.6GB）到 Hugging Face 快取，之後完全離線。**不需要 Python，也不需要 CUDA**。首次啟動 Windows SmartScreen 可能提示（未簽章），點「其他資訊 → 仍要執行」；原始碼全公開，可自行檢視或自行打包。
 
 ## 快速開始（從原始碼）
 
@@ -49,7 +58,7 @@ pythonw gui.py     # 背景執行（無主控台視窗）
 |---|---|---|
 | 熱鍵 | `<ctrl>+<alt>+d` | 點欄位後直接按下組合鍵設定 |
 | ASR 模型 | `large-v3-turbo` | `large-v3` / `medium` / `small` |
-| 裝置 | `cpu` | `cuda`（失敗自動退回 cpu） |
+| 裝置 | `cpu` | 預設 `cpu`（自帶、任何機器可跑）。`cuda` **需目標機器已裝 NVIDIA CUDA 執行庫**；缺了會自動退回 cpu（原因寫進 `gui.log`） |
 | 語言 | `zh` | `en` / `auto` |
 | 繁化 | 開 | OpenCC `s2twp` 強制繁體台灣用語 |
 
@@ -71,6 +80,7 @@ pyinstaller gui.spec
 - **打字打不進某個程式**：以系統管理員身分執行的視窗，非管理員的本程式無法送入（Windows UIPI）；要對它聽寫，請以管理員身分執行本程式。
 - **麥克風找不到**：`python -c "import sounddevice; print(sounddevice.query_devices())"` 檢查裝置。
 - **首次啟動很久沒反應**：正在下載 `large-v3-turbo`（~1.6GB），耐心等托盤轉綠；`gui.log` 有進度。
+- **選了 CUDA 卻報 DLL 錯誤或變慢**：安裝版/免安裝版的 CUDA 依賴目標機器的 NVIDIA CUDA 執行庫。沒裝就別選 cuda——維持預設 `cpu` 即可（`gui.log` 會記錄退回原因）。想用 GPU 請自行安裝對應的 CUDA/cuDNN。
 
 ## 致謝
 
