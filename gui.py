@@ -31,6 +31,7 @@ from PySide6.QtGui import (
     QPixmap,
     QTextCursor,
 )
+from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -61,6 +62,7 @@ from notes import NotesStore
 APP_DIR = Path(os.environ.get("APPDATA") or Path.home()) / "voice2text-dictate"
 SETTINGS_PATH = APP_DIR / "settings.json"
 QUIT_HOTKEY = "<ctrl>+<alt>+q"
+SINGLE_INSTANCE_NAME = "whisper-dictate-tw-single-instance"  # 防重複執行的本機伺服器名
 
 DEFAULTS = {
     "model": "large-v3-turbo",
@@ -546,6 +548,27 @@ def _setup_logging() -> None:
     )
 
 
+def _another_instance_running() -> bool:
+    """若已有實例在跑：連上它的本機伺服器、送出 show 請求，回傳 True。"""
+    probe = QLocalSocket()
+    probe.connectToServer(SINGLE_INSTANCE_NAME)
+    if probe.waitForConnected(300):
+        probe.write(b"show")
+        probe.waitForBytesWritten(300)
+        probe.disconnectFromServer()
+        return True
+    probe.abort()
+    return False
+
+
+def _on_second_instance(server: QLocalServer, window: AppWindow) -> None:
+    """有第二個實例來連 → 把主視窗叫回前景。"""
+    conn = server.nextPendingConnection()
+    if conn is not None:
+        conn.close()
+    window._show_window()
+
+
 def main() -> int:
     _setup_logging()
     logging.info("gui 啟動")
@@ -554,10 +577,27 @@ def main() -> int:
         app.setQuitOnLastWindowClosed(False)  # 關視窗不等於離開
         _apply_light_theme(app)
         app.setStyleSheet(STYLE)
+
+        # 單一實例：已在跑就叫回原視窗，自己結束
+        if _another_instance_running():
+            logging.info("已有實例在跑，通知其顯示視窗後結束")
+            return 0
+
         if not QSystemTrayIcon.isSystemTrayAvailable():
             QMessageBox.critical(None, "聽寫", "此系統沒有可用的系統匣，無法執行。")
             return 1
+
         window = AppWindow(app)  # 保住參照到事件迴圈結束
+
+        # 本實例當伺服器，接受後續啟動送來的 show 請求
+        QLocalServer.removeServer(SINGLE_INSTANCE_NAME)  # 清 stale pipe
+        server = QLocalServer()
+        if server.listen(SINGLE_INSTANCE_NAME):
+            server.newConnection.connect(lambda: _on_second_instance(server, window))
+            window._single_instance_server = server  # 保住參照，避免 GC
+        else:
+            logging.warning("單一實例伺服器 listen 失敗：%s", server.errorString())
+
         window.show()
         logging.info("進入事件迴圈")
         return app.exec()

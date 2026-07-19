@@ -21,9 +21,10 @@ Whisper's Chinese output to Traditional (Taiwan) — Whisper alone may emit Simp
 
 ## Modules
 
-- [asr.py](asr.py) — `SpeechToText` (faster-whisper `WhisperModel`; cuda→cpu int8 fallback).
+- [asr.py](asr.py) — `SpeechToText` (faster-whisper `WhisperModel`; cuda→cpu int8 fallback, logged).
   `transcribe_segments()` yields per-segment text; `transcribe()` joins. Accepts an ndarray or a
-  file path (mp3/m4a/wav… decoded via the bundled `av`).
+  file path (mp3/m4a/wav… decoded via the bundled `av`). Sets `HF_HOME` to `<app dir>/models`
+  before importing faster-whisper so the model downloads next to the app (respects a user-set `HF_HOME`).
 - [dictation_engine.py](dictation_engine.py) — `DictationEngine`: state machine
   idle→recording→processing. `toggle()` for mic; `transcribe_file(path, on_segment)` for import.
   Applies OpenCC, types at cursor via `pynput`, reports state/result via callbacks (UI-agnostic).
@@ -32,7 +33,9 @@ Whisper's Chinese output to Traditional (Taiwan) — Whisper alone may emit Simp
   event to a pynput hotkey string (e.g. `<ctrl>+<alt>+d`), validated with `keyboard.HotKey.parse`.
 - [gui.py](gui.py) — PySide6 app: `QMainWindow` with tabs (聽寫/筆記歷史/音檔匯入/設定) +
   `QSystemTrayIcon`. Closing the window hides to tray. Cross-thread UI updates go through the
-  `Bridge` QObject signals.
+  `Bridge` QObject signals. Single-instance via `QLocalServer`/`QLocalSocket` — a second launch
+  signals the running instance to surface its window, then exits. Forces a light theme (Fusion +
+  palette) so it's readable under a dark OS theme.
 - [config.py](config.py) — ASR fallback defaults; each overridable by a same-named env var. The
   GUI's own settings live in `settings.json` and are passed explicitly to `SpeechToText`.
 
@@ -43,10 +46,10 @@ py -3.13 -m venv .venv; .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 pythonw gui.py                 # background (no console); python gui.py to see messages
 
-# package
+# package (portable only — no installer)
 pip install -r requirements-build.txt
 pyinstaller gui.spec           # -> dist\whisper-dictate-tw\ (model NOT bundled)
-iscc installer.iss             # -> setup.exe (needs Inno Setup)
+Compress-Archive dist\whisper-dictate-tw whisper-dictate-tw-portable.zip
 ```
 
 ## Verifying changes

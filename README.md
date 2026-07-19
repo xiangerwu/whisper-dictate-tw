@@ -16,17 +16,15 @@
 - **音檔匯入**：選 mp3/m4a/wav… 轉成文字（逐段即時顯示），存進筆記。
 - **系統匣常駐**：關閉視窗縮回托盤，背景待命；圖示顏色反映狀態。
 - **按鍵擷取設定熱鍵**：直接按下組合鍵設定，不用手打字串。
+- **只跑一份**：重複執行會把已開的視窗叫回前景，不會開多個。
 
 預設模型 `large-v3-turbo`（多語、接近 large-v3 準度但快數倍），預設用 **CPU**（int8，任何機器都能跑）。
 
-## 下載
+## 下載（免安裝）
 
-到 **[Releases](https://github.com/xiangerwu/whisper-dictate-tw/releases)** 下載：
+到 **[Releases](https://github.com/xiangerwu/whisper-dictate-tw/releases)** 下載 `whisper-dictate-tw-portable.zip`，解壓後雙擊 `whisper-dictate-tw.exe`。免安裝、**不需要 Python，也不需要 CUDA**。
 
-- `whisper-dictate-tw-setup.exe` — 安裝檔（per-user，免系統管理員，可勾開機自動啟動）。
-- 或直接抓免安裝的 zip，解開雙擊 `whisper-dictate-tw.exe`。
-
-首次執行會下載模型（約 1.6GB）到 Hugging Face 快取，之後完全離線。**不需要 Python，也不需要 CUDA**。首次啟動 Windows SmartScreen 可能提示（未簽章），點「其他資訊 → 仍要執行」；原始碼全公開，可自行檢視或自行打包。
+首次執行會下載模型（約 1.6GB）到 **app 目錄下的 `models\`**，之後完全離線。首次啟動 Windows SmartScreen 可能提示（未簽章），點「其他資訊 → 仍要執行」；原始碼全公開，可自行檢視或自行打包。
 
 ## 快速開始（從原始碼）
 
@@ -42,7 +40,7 @@ pythonw gui.py     # 背景執行（無主控台視窗）
 # 或 python gui.py 前景執行，可看到訊息
 ```
 
-首次啟動會下載 `large-v3-turbo` 模型（約 1.6GB）到 Hugging Face 快取，之後完全離線。托盤圖示載入中為灰色，就緒轉綠。
+首次啟動會下載 `large-v3-turbo` 模型（約 1.6GB）到專案目錄下的 `models\`，之後完全離線。托盤圖示載入中為灰色，就緒轉綠。
 
 ## 使用
 
@@ -50,7 +48,8 @@ pythonw gui.py     # 背景執行（無主控台視窗）
 - **Ctrl+Alt+Q**：離開。
 - 分頁：**聽寫**（狀態、最近結果）／**筆記歷史**（搜尋、複製、刪除）／**音檔匯入**／**設定**。
 - 關閉主視窗＝縮回系統匣，不會結束程式；從托盤選單可再開或離開。
-- 開機自動啟動：把 `pythonw gui.py`（或安裝後的 exe）捷徑丟進 `shell:startup`。
+- **只會執行一份**：再次點開會把已在跑的視窗叫到前景，不會開新的一個。
+- 開機自動啟動：把 `whisper-dictate-tw.exe`（或源碼版 `pythonw gui.py`）捷徑丟進 `shell:startup`。
 
 ## 設定（設定分頁）
 
@@ -62,17 +61,17 @@ pythonw gui.py     # 背景執行（無主控台視窗）
 | 語言 | `zh` | `en` / `auto` |
 | 繁化 | 開 | OpenCC `s2twp` 強制繁體台灣用語 |
 
-設定存於 `%APPDATA%\voice2text-dictate\settings.json`，筆記存於同目錄 `notes.db`。
+設定存於 `%APPDATA%\voice2text-dictate\settings.json`，筆記存於同目錄 `notes.db`。**模型**下載在 app 目錄下的 `models\`（每個 app 位置各一份；設環境變數 `HF_HOME` 可改位置）。
 
-## 打包成 exe
+## 打包成免安裝 exe
 
 ```powershell
 pip install -r requirements-build.txt
 pyinstaller gui.spec
 # 產出 dist\whisper-dictate-tw\（含 whisper-dictate-tw.exe，模型不打包）
+# 壓成免安裝 zip 散布：
+Compress-Archive dist\whisper-dictate-tw whisper-dictate-tw-portable.zip
 ```
-
-要做安裝檔：安裝 [Inno Setup](https://jrsoftware.org/isdl.php) 後 `iscc installer.iss`，產出 `whisper-dictate-tw-setup.exe`（可勾開機自動啟動）。
 
 ## 疑難排解
 
