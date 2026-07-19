@@ -7,12 +7,28 @@ transcribe_segments() 逐段 yield，供音檔匯入做即時輸出。
 from __future__ import annotations
 
 import logging
+import os
+import sys
+from pathlib import Path
 from typing import Iterator
 
 import numpy as np
-from faster_whisper import WhisperModel
 
-import config
+
+def _app_base() -> Path:
+    """app 所在目錄：打包版＝exe 資料夾；源碼版＝專案資料夾。"""
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).parent
+    return Path(__file__).resolve().parent
+
+
+# 模型下載到 app 同目錄的 models\ 下，方便隨 app 一起管理/搬移。
+# 必須在 import faster-whisper（會拉 huggingface_hub）之前設定；使用者自訂 HF_HOME 則尊重之。
+os.environ.setdefault("HF_HOME", str(_app_base() / "models"))
+
+from faster_whisper import WhisperModel  # noqa: E402 - 需在設定 HF_HOME 之後才 import
+
+import config  # noqa: E402
 
 
 def _normalize_language(value) -> str | None:

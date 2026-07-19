@@ -13,6 +13,9 @@ Output/
 # 記錄
 *.log
 
+# 模型快取（隨 app 放在 models\，體積大，不進版控）
+models/
+
 # 編輯器 / 工具
 .claude/settings.local.json
 .vscode/
