@@ -1,0 +1,19 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# PyInstaller / Inno Setup 產出
+build/
+dist/
+*.spec.bak
+Output/
+
+# 記錄
+*.log
+
+# 編輯器 / 工具
+.claude/settings.local.json
+.vscode/
+.idea/

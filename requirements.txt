@@ -1,0 +1,7 @@
+# 本地聽寫 app 執行相依（Windows / Python 3.13）
+faster-whisper>=1.2.1   # ASR（CTranslate2 後端）；含 av，可解 mp3/m4a/wav 等
+sounddevice>=0.5.5      # 麥克風錄音
+numpy>=2.0             # 音訊緩衝
+pynput>=1.7.6          # 全域熱鍵 + 在游標位置模擬打字
+PySide6>=6.8           # Qt6 圖形介面（主視窗 + 系統匣）
+opencc>=1.1            # 決定性繁化（s2twp，台灣用語）

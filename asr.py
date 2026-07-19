@@ -1,0 +1,64 @@
+"""語音轉文字：以 faster-whisper（CTranslate2 後端）把音訊轉成含標點的文字。
+
+預設跑 CPU（int8），品質與 GPU fp16 幾乎無差。transcribe() 接受 16kHz mono 的
+float32 ndarray 或音檔路徑（mp3/m4a/wav… 由 faster-whisper 內建的 av 解碼）。
+transcribe_segments() 逐段 yield，供音檔匯入做即時輸出。
+"""
+from __future__ import annotations
+
+from typing import Iterator
+
+import numpy as np
+from faster_whisper import WhisperModel
+
+import config
+
+
+def _normalize_language(value) -> str | None:
+    """把設定字串轉成 faster-whisper 認得的語言碼；auto/空字串 → None（自動偵測）。"""
+    if value is None:
+        return None
+    v = str(value).strip().lower()
+    return None if v in ("", "auto", "none") else v
+
+
+class SpeechToText:
+    def __init__(self, model=None, device=None, compute_type=None, language=None):
+        self.model_name = model or config.ASR_MODEL
+        self.device = device or config.ASR_DEVICE
+        self.compute_type = compute_type or config.ASR_COMPUTE_TYPE
+        self.language = _normalize_language(
+            language if language is not None else config.ASR_LANGUAGE
+        )
+        self.model = self._load()
+
+    def _load(self) -> WhisperModel:
+        """載入模型；若指定 cuda 但失敗（無 GPU / 顯存不足），自動退回 CPU int8。"""
+        try:
+            return WhisperModel(
+                self.model_name, device=self.device, compute_type=self.compute_type
+            )
+        except Exception as exc:  # noqa: BLE001 - 退回策略需攔截所有載入錯誤
+            if self.device != "cpu":
+                print(f"[ASR] {self.device} 載入失敗（{exc}），改用 CPU int8。")
+                self.device, self.compute_type = "cpu", "int8"
+                return WhisperModel(self.model_name, device="cpu", compute_type="int8")
+            raise
+
+    def transcribe_segments(self, audio) -> Iterator[str]:
+        """逐段 yield 文字。接受 np.ndarray(float32/16kHz/mono) 或音檔路徑。"""
+        if isinstance(audio, np.ndarray):
+            audio = audio.astype(np.float32)
+
+        segments, _info = self.model.transcribe(
+            audio,
+            language=self.language,
+            beam_size=5,
+            vad_filter=True,  # faster-whisper 內建 Silero VAD，過濾靜音段
+        )
+        for segment in segments:
+            yield segment.text
+
+    def transcribe(self, audio) -> str:
+        """接受 np.ndarray(float32/16kHz/mono) 或音檔路徑，回傳含標點的整段文字。"""
+        return "".join(self.transcribe_segments(audio)).strip()
